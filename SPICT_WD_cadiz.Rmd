@@ -14,6 +14,11 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, comment = NA)
 ```
 
+```{r include=FALSE}
+getwd()
+```
+
+
 # Software versions:
 
 **R**: R version 4.4.1 (2024-06-14 ucrt)  
@@ -71,10 +76,10 @@ Load input data for the ane-27.9aS stock (1989-2023). Information that each fiel
 * __*obsl3*__: yearly exploitable biomass Index (tonnes) from the **Bocadeva** survey.  
 
 ```{r include=FALSE}
-ane <- read.csv("path/to/data")
+ane <- read.csv("data.csv")
 ```
 
-# RUN 1. SPiCT for anchovy in Division 9a South:
+# RUN 1. SPiCT for anchovy in Division 9a South: 
 
 ## Create the SPiCT input object (`input`) for RUN 1:
 Inputs: quarterly landings (*obsC*, *timeC*) and exploitable biomass indices (*obsl*, *timel*, *obsl1*, *time1*, *obsl2*, *time2*).
@@ -139,6 +144,7 @@ res <- fit.spict(input)
 summary(res)
 plot(res)
 ```
+
 ```{r include=FALSE}
 write.csv(capture.output(summary(res)), "path")
 ```
