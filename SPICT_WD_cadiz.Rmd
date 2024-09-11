@@ -1,0 +1,345 @@
+---
+title: Applying SPiCT to anchovy (*Engraulis encrasicolus*) in Division 9a South (Atlantic Iberian waters)
+subtitle: Presented at ICES WGHANSA, benchmark meeting 10 september 2024, Nantes, France.
+author: "Beñat Egidazu-de la Parte^a^ & Margarita María Rincón Hidalgo^b^"
+output: 
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+*^a^Basque Centre for Climate Change (BC3), Sede Building, Campus EHU/UPV, Leioa, Bizkaia, Spain.*  
+*^b^Instituto Español de Oceanografía (IEO-CSIC), Centro Oceanográfico de Cádiz, Puerto pesquero, Muelle de Levante s/n, Apdo. 2609, 11006 Cádiz, Spain.*
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, comment = NA)
+```
+
+# Software versions:
+
+**R**: R version 4.4.1 (2024-06-14 ucrt)  
+**RStudio**: R Studio 2024.04.2+764 (2024-06-05) "Chocolate Cosmos" Release for Windows  
+**SPiCT**: spict_v1.3.8.1 (2023-12-11)  
+
+```{r include=FALSE}
+############# SAVE DATA ###########
+
+xtab<-function(x,caption='Table X.', file=stdout(), width='"100%"', cornername='', dec=rep(1,ncol(x))){
+  nc<-ncol(x)
+  lin<-paste('<table width=',width,'>', sep='')
+  lin<-c(lin,sub('$','</td></tr>',sub('\\. |\\.$','.</b> ',
+                                      sub('^', paste('<tr><td colspan=',nc+1,'><b>',sep=''), caption))))
+  hr<-paste('<tr><td colspan=',nc+1,'><hr noshade></td></tr>', sep='')
+  lin<-c(lin,hr)
+  cnames<-colnames(x)
+  cnames<-paste(sub('$','</b></td>',sub('^','<td align=right><b>',cnames)), collapse='\t')
+  lin<-c(lin,paste('<tr>',paste('<td align=left><b>',cornername,'</b></td>',sep=''),cnames,'</tr>'))
+  lin<-c(lin,hr)
+  rnames<-sub('$','</b></td>',sub('^','<tr> <td align=left><b>',rownames(x)))
+  #x<-sapply(1:ncol(x),function(i)sub('NA','  ',format(round(x[,i],dec[i]))))
+  x<-sapply(1:ncol(x),function(i)sub('NA','  ',formatC(round(x[,i],dec[i]),digits=dec[i], format='f')))
+  for(i in 1:nrow(x)){
+    thisline<-paste(rnames[i],paste(sub('$','</td>',sub('^','<td align=right>',x[i,])), collapse='\t'),'</tr>', sep='')
+    lin<-c(lin,thisline)
+  }
+  lin<-c(lin,hr)
+  lin<-c(lin,'</table><br>\n')
+  writeLines(lin,con=file)
+}
+```
+
+### Load libraries:
+
+```{r message=FALSE}
+library(spict)
+library(dplyr)
+library(kableExtra)
+library(tinytex)
+```
+
+### Load Data:
+
+Load input data for the ane-27.9aS stock (1989-2023). Information that each field includes is:  
+* __*timeC*.__: time for landings  
+* __*obsC*__: quarterly landings (tonnes)  
+* __*timel*__: time for exploitable biomass Index from the **Pelago** survey.  
+* __*obsl*__:  yearly exploitable biomass Index (tonnes) from the **Pelago** survey.  
+* __*time1*__: time for exploitable biomass Index from the **Ecocadiz** survey.  
+* __*obsl1*__: yearly exploitable biomass Index (tonnes) from the **Ecocadiz** survey.  
+* __*time2*__: time exploitable biomass Index from the **Ecocadiz reclutas** survey.  
+* __*obsl2*__: yearly exploitable biomass Index (tonnes) from the **Ecocadiz reclutas** survey.    
+* __*time3*__: time exploitable biomass Index from the **Bocadeva** survey.  
+* __*obsl3*__: yearly exploitable biomass Index (tonnes) from the **Bocadeva** survey.  
+
+```{r include=FALSE}
+ane <- read.csv("path/to/data")
+```
+
+# RUN 1. SPiCT for anchovy in Division 9a South:
+
+## Create the SPiCT input object (`input`) for RUN 1:
+Inputs: quarterly landings (*obsC*, *timeC*) and exploitable biomass indices (*obsl*, *timel*, *obsl1*, *time1*, *obsl2*, *time2*).
+```{r include=FALSE}
+#First of all we clean the NAs from `ane`:
+# Catch data:
+obsC <- ane$obsC
+timeC <- ane$timeC
+# Temporal Pelago dataframe:
+temp_df_pelago <- data.frame(
+  obsl = ane$obsl,
+  timel = ane$timel
+  )
+# Clean Pelago:
+temp_df_pelago <- na.omit(temp_df_pelago)
+# Temporal Ecocadiz dataframe:
+temp_df_ecocadiz <- data.frame(
+  obsl1 = ane$obsl1,
+  time1 = ane$time1
+)
+# Clean Ecocadiz:
+temp_df_ecocadiz <- na.omit(temp_df_ecocadiz)
+# Temporal Ecocadiz Reclutas:
+temp_df_ecocadiz_rec <- data.frame(
+  obsl2 = ane$obsl2,
+  time2 = ane$time2
+  )
+# Clean Ecocadiz Reclutas
+temp_df_ecocadiz_rec <- na.omit(temp_df_ecocadiz_rec)
+
+# Temporal BOCADEVA:
+temp_df_bocadeva <- data.frame(
+  obsl3 =  ane$obsl3,
+  time3 =  ane$time3
+)
+# Clean Bocadeva:
+temp_df_bocadeva <- na.omit(temp_df_bocadeva)
+```
+
+```{r}
+input <- list(timeC = timeC, obsC = obsC)
+input$timeI <- list(temp_df_pelago$timel, temp_df_ecocadiz$time1, temp_df_ecocadiz_rec$time2)
+input$obsI <- list()
+input$obsI[[1]] <- temp_df_pelago$obsl
+input$obsI[[2]] <- temp_df_ecocadiz$obsl1
+input$obsI[[3]] <- temp_df_ecocadiz_rec$obsl2
+```
+
+## Check and plot `input`:
+```{r fig.width=12, fig.height=8, dpi=300}
+input <- check.inp(input)
+plotspict.data(input, qlegend = TRUE)
+```
+
+```{r fig.width=12, fig.height=8, dpi=300}
+plotspict.ci(input)
+```
+
+## Fit the model & plot results:
+```{r}
+res <- fit.spict(input)
+summary(res)
+plot(res)
+```
+```{r include=FALSE}
+write.csv(capture.output(summary(res)), "path")
+```
+Absolute biomass:  
+```{r}
+plotspict.biomass(res) # Absolute biomass 
+```
+  
+Absolute F:  
+```{r}
+plotspict.f(res) # Absolute F
+```
+  
+Relative B & F and Catch & Kobe plot:  
+```{r}
+plot2(res) # Relative B, relative F, catch & Kobe plot
+```
+  
+Priors:  
+```{r}
+plotspict.priors(res) # plot priors
+```
+  
+## Residuals and Diagnostics:  
+```{r}
+res <- calc.osa.resid(res)
+plotspict.osar(res)         #OSA residual analysis to evaluate the fit
+```
+  
+### Diagnostic check-list for aceptance:
+```{r}
+# 1.Assessment convergence: if 0 => OK
+res$opt$convergence
+```
+
+```{r}
+# 2.All variance parameters are finite: if TRUE => OK
+all(is.finite(res$sd))
+```
+
+```{r}
+# 3.Test for no violation of model assumptions
+sumspict.diagnostics(res)
+plotspict.diagnostic(res) 
+```
+
+```{r}
+# 4. Retrospective pattern analysis:
+retrores <- retro(res, nretroyear = 3)
+plotspict.retro(retrores) 
+#mohns_rho(retrores, what=c("BBmsy","FFmsy")) # if -0.2 < mohns_rho < 0.2 => OK
+plotspict.retro.fixed(retrores)
+```
+
+```{r}
+# 5.Check for realistic production curve: if between 0.1 and 0.9 => OK
+calc.bmsyk(res)
+plotspict.production(res)
+```
+
+```{r message=FALSE}
+# 6.Check for assessment uncertainty:
+# Main variance paramterers (logsdb, logsdc, logsdi, logsdf) should not be unreallistically high:
+get.par("logsdb", res)
+get.par("logsdc", res)
+get.par("logsdi", res)
+get.par("logsdf", res)
+calc.om(res) # if order of magnitude < 2 => OK)
+```
+
+```{r message=FALSE, include=FALSE}
+# 7. Initial values do not influence the parameter estimates:
+check <- check.ini(input, ntrials = 30)
+```
+```{r message= FALSE}
+# 7. Initial values do not influence the parameter estimates:
+check$check.ini$resmat  # Trials that converged should have same or similar estimates.
+```
+
+## Covariance between the model parameters (fixed effects):
+```{r}
+#correlation between the model parameters (fixed effects)
+cov2cor(res$cov.fixed)
+```
+
+# RUN 2. SPiCT for anchovy in Division 9a South:
+
+## Create the SPiCT input object (`input`) for RUN 2:
+Inputs: quarterly landings (*obsC*, *timeC*) and exploitable biomass indices (*obsl*, *timel*, *obsl1*, *time1*, *obsl2*, *time2*, *obsl3*, *time3*).
+
+```{r}
+input_boc <- list(timeC = timeC, obsC = obsC)
+input_boc$timeI <- list(temp_df_pelago$timel, temp_df_ecocadiz$time1, temp_df_ecocadiz_rec$time2, temp_df_bocadeva$time3)
+input_boc$obsI <- list()
+input_boc$obsI[[1]] <- temp_df_pelago$obsl
+input_boc$obsI[[2]] <- temp_df_ecocadiz$obsl1
+input_boc$obsI[[3]] <- temp_df_ecocadiz_rec$obsl2
+input_boc$obsI[[4]] <- temp_df_bocadeva$obsl3
+```
+
+## Check and plot `input`:
+```{r fig.width=12, fig.height=8, dpi=300}
+input_boc <- check.inp(input_boc)
+plotspict.data(input_boc, qlegend = TRUE)
+```
+
+```{r fig.width=12, fig.height=8, dpi=300}
+plotspict.ci(input_boc)
+```
+
+## Fit the model & plot results:
+```{r}
+res_boc <- fit.spict(input_boc)
+summary(res_boc)
+plot(res_boc)
+```
+
+```{r include=FALSE}
+write.csv(capture.output(summary(res_boc)), "path")
+```
+
+Absolute biomass:   
+```{r}
+plotspict.biomass(res_boc) # Absolute biomass 
+```
+  
+Absolute F:  
+```{r}
+plotspict.f(res_boc) # Absolute F
+```
+  
+Relative B & F and Catch & Kobe plot:  
+```{r}
+plot2(res_boc) # Relative B, relative F, catch & Kobe plot
+```
+  
+Priors:  
+```{r}
+plotspict.priors(res_boc) # plot priors
+```
+  
+## Residuals and Diagnostics:  
+```{r}
+res_boc <- calc.osa.resid(res_boc)
+plotspict.osar(res_boc)         #OSA residual analysis to evaluate the fit
+```
+  
+### Diagnostic check-list for aceptance:
+```{r}
+# 1.Assessment convergence: if 0 => OK
+res_boc$opt$convergence
+```
+
+```{r}
+# 2.All variance parameters are finite: if TRUE => OK
+all(is.finite(res_boc$sd))
+```
+
+```{r}
+# 3.Test for no violation of model assumptions
+sumspict.diagnostics(res_boc)
+plotspict.diagnostic(res_boc) 
+```
+
+```{r}
+# 4. Retrospective pattern analysis:
+retrores_boc <- retro(res_boc, nretroyear = 4)
+plotspict.retro(retrores_boc) 
+#mohns_rho(retrores_boc, what=c("BBmsy","FFmsy")) # if -0.2 < mohns_rho < 0.2 => OK
+plotspict.retro.fixed(retrores_boc)
+```
+
+```{r}
+# 5.Check for realistic production curve: if between 0.1 and 0.9 => OK
+calc.bmsyk(res_boc)
+plotspict.production(res_boc)
+```
+
+```{r message=FALSE}
+# 6.Check for assessment uncertainty:
+# Main variance paramterers (logsdb, logsdc, logsdi, logsdf) should not be unreallistically high:
+get.par("logsdb", res_boc)
+get.par("logsdc", res_boc)
+get.par("logsdi", res_boc)
+get.par("logsdf", res_boc)
+calc.om(res_boc) # if order of magnitude < 2 => OK)
+```
+
+```{r message=FALSE, include=FALSE}
+# 7. Initial values do not influence the parameter estimates:
+check_boc <- check.ini(input_boc, ntrials = 30)
+```
+
+```{r message=FALSE}
+# 7. Initial values do not influence the parameter estimates:
+check_boc$check.ini$resmat # Trials that converged should have same or similar estimates.
+```
+  
+## Covariance between the model parameters (fixed effects):
+```{r}
+#correlation between the model parameters (fixed effects)
+cov2cor(res_boc$cov.fixed)
+```
+
