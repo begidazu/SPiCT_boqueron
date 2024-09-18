@@ -1,11 +1,16 @@
 ---
 title: Applying SPiCT to anchovy (*Engraulis encrasicolus*) in Division 9a South (Atlantic Iberian waters)
-subtitle: Presented at ICES WGHANSA, benchmark meeting 10 september 2024, Nantes, France.
+subtitle: Presented at ICES WGHANSA, benchmark meeting 23-27 september 2024, Nantes, France.
 author: "Beñat Egidazu-de la Parte^a^ & Margarita María Rincón Hidalgo^b^"
 output: 
-  pdf_document: default
+  html_document:
+    css: "styles.css"
   word_document: default
-  html_document: default
+  pdf_document:
+    latex_engine: xelatex
+header-includes:
+  - \usepackage{ragged2e}
+  - \justifying
 ---
 *^a^Basque Centre for Climate Change (BC3), Sede Building, Campus EHU/UPV, Leioa, Bizkaia, Spain.*  
 *^b^Instituto Español de Oceanografía (IEO-CSIC), Centro Oceanográfico de Cádiz, Puerto pesquero, Muelle de Levante s/n, Apdo. 2609, 11006 Cádiz, Spain.*
@@ -17,13 +22,6 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, comment = NA)
 ```{r include=FALSE}
 getwd()
 ```
-
-
-# Software versions:
-
-**R**: R version 4.4.1 (2024-06-14 ucrt)  
-**RStudio**: R Studio 2024.04.2+764 (2024-06-05) "Chocolate Cosmos" Release for Windows  
-**SPiCT**: spict_v1.3.8.1 (2023-12-11)  
 
 ```{r include=FALSE}
 ############# SAVE DATA ###########
@@ -52,37 +50,17 @@ xtab<-function(x,caption='Table X.', file=stdout(), width='"100%"', cornername='
 }
 ```
 
-### Load libraries:
-
-```{r message=FALSE}
+```{r include=FALSE}
 library(spict)
 library(dplyr)
 library(kableExtra)
 library(tinytex)
 ```
 
-### Load Data:
-
-Load input data for the ane-27.9aS stock (1989-2023). Information that each field includes is:  
-* __*timeC*.__: time for landings  
-* __*obsC*__: quarterly landings (tonnes)  
-* __*timel*__: time for exploitable biomass Index from the **Pelago** survey.  
-* __*obsl*__:  yearly exploitable biomass Index (tonnes) from the **Pelago** survey.  
-* __*time1*__: time for exploitable biomass Index from the **Ecocadiz** survey.  
-* __*obsl1*__: yearly exploitable biomass Index (tonnes) from the **Ecocadiz** survey.  
-* __*time2*__: time exploitable biomass Index from the **Ecocadiz reclutas** survey.  
-* __*obsl2*__: yearly exploitable biomass Index (tonnes) from the **Ecocadiz reclutas** survey.    
-* __*time3*__: time exploitable biomass Index from the **Bocadeva** survey.  
-* __*obsl3*__: yearly exploitable biomass Index (tonnes) from the **Bocadeva** survey.  
-
 ```{r include=FALSE}
 ane <- read.csv("data.csv")
 ```
 
-# RUN 1. SPiCT for anchovy in Division 9a South: 
-
-## Create the SPiCT input object (`input`) for RUN 1:
-Inputs: quarterly landings (*obsC*, *timeC*) and exploitable biomass indices (*obsl*, *timel*, *obsl1*, *time1*, *obsl2*, *time2*).
 ```{r include=FALSE}
 #First of all we clean the NAs from `ane`:
 # Catch data:
@@ -119,233 +97,398 @@ temp_df_bocadeva <- data.frame(
 temp_df_bocadeva <- na.omit(temp_df_bocadeva)
 ```
 
-```{r}
-input <- list(timeC = timeC, obsC = obsC)
-input$timeI <- list(temp_df_pelago$timel, temp_df_ecocadiz$time1, temp_df_ecocadiz_rec$time2)
-input$obsI <- list()
-input$obsI[[1]] <- temp_df_pelago$obsl
-input$obsI[[2]] <- temp_df_ecocadiz$obsl1
-input$obsI[[3]] <- temp_df_ecocadiz_rec$obsl2
-```
+# Introduction
 
-## Check and plot `input`:
-```{r fig.width=12, fig.height=8, dpi=300}
-input <- check.inp(input)
-plotspict.data(input, qlegend = TRUE)
-```
+Small and mid-size pelagic fish occupy intermediate levels in the marine trophic webs where they play an essential role (Cury *et al.*, 2000). These fish act as links between the upper and lower trophic levels, capturing energy from lower levels and making it available to higher trophic levels (Morello & Arneri, 2009). Global captures of finfish, the taxon where small and mid-size pelagic fish are included, account for the 85% of the marine captures, with small pelagics as the main group (FAO, 2024a). 
 
-```{r fig.width=12, fig.height=8, dpi=300}
-plotspict.ci(input)
-```
+According to the economic importance of *Engraulis encrasicolus*, the species under study, it accounted for approximately 4% of the total european countries fisheries in 2022 (FAO, 2024b). Concerning Spain and Portugal, *Engraulis encrasicolus* covers more than 5% and 2% of the total fisheries, respectively (FAO, 2024b). Therefore, the knowledge and correct management of the *Engraulis encrasicolus* fishery is of utmost importance for the fishing sector of both countries.
 
-## Fit the model & plot results:
-```{r}
-res <- fit.spict(input)
-summary(res)
-plot(res)
-```
+In this study we apply the Stocastic Surplus Production Model in Continuous Time (SPiCT) with 4 different model configurations to evaluate the *Engraulis encrasicolus* stock status in ICES Division 9a South. Model results allow us to establish reference points for Maximum Sustainable Yield, Biomass at Maximum Sustainable Yield and Fishing Mortality at Maximum Sustainable Yield as well as to determine how model configuration could affect the estimates and model robustness.
+
+# Material & Methods
+
+## Data
+
+We used data from commercial landings as catch obervations and independent scientific survey data as exploitable biomass indices. In this sense, we used quarterly commercial landings data comprised from 1989 to 2023 and yearly data from PELAGO (1999-2023), ECOCADIZ (2004-2023), ECOCADIZ-RECLUTAS (2012-2023) and BOCADEVA (2005-2023) surveys. We obtained the corresponding exploitable biomass index for each period and survey considering the minimum length observed in the landings during that period. In addition, we added as much uncertainty as possible, without compromising the stability of the model, to the 2012 estimate of the ECOCADIZ-RECLUTAS survey since it was only sampled in Spanish waters. 
+
+## SPiCT
+
+Stocastic Surplus Production Model in Continuos Time (Pedersen & Berg, 2017) is a model that has been widely used in data-limited situations (i.e. Bluemel *et al.*, 2021; González Herraiz *et al.*, 2023; Soto *et al.*, 2023). This stochastic state-space model aggregates biomass across size and age groups, using the equations reported by Pella and Tomlinson (1969), providing stock status estimates and reproducing population dynamics (Derhy *et al.*, 2022). By relaxing the common assumption that catches are known without error, SPiCT permits to assess fish stock status with a more realistic quantification of uncertainty (Pedersen & Berg, 2017), allowing for a broader perspective of the stock situation and a better understanding of the risks associated with management decisions.
+
+## Scenarios
+
+We tested the SPiCT model with 4 different configurations of the input data:  
+
+* Scenario 1: commercial landings data and exploitable biomass indices from PELAGO, ECOCADIZ and ECOCADIZ-RECLUTAS. 
 
 ```{r include=FALSE}
-write.csv(capture.output(summary(res)), "path")
-```
-Absolute biomass:  
-```{r}
-plotspict.biomass(res) # Absolute biomass 
-```
-  
-Absolute F:  
-```{r}
-plotspict.f(res) # Absolute F
-```
-  
-Relative B & F and Catch & Kobe plot:  
-```{r}
-plot2(res) # Relative B, relative F, catch & Kobe plot
-```
-  
-Priors:  
-```{r}
-plotspict.priors(res) # plot priors
-```
-  
-## Residuals and Diagnostics:  
-```{r}
-res <- calc.osa.resid(res)
-plotspict.osar(res)         #OSA residual analysis to evaluate the fit
-```
-  
-### Diagnostic check-list for aceptance:
-```{r}
-# 1.Assessment convergence: if 0 => OK
-res$opt$convergence
-```
-
-```{r}
-# 2.All variance parameters are finite: if TRUE => OK
-all(is.finite(res$sd))
-```
-
-```{r}
-# 3.Test for no violation of model assumptions
-sumspict.diagnostics(res)
-plotspict.diagnostic(res) 
-```
-
-```{r}
-# 4. Retrospective pattern analysis:
-retrores <- retro(res, nretroyear = 3)
-plotspict.retro(retrores) 
-#mohns_rho(retrores, what=c("BBmsy","FFmsy")) # if -0.2 < mohns_rho < 0.2 => OK
-plotspict.retro.fixed(retrores)
-```
-
-```{r}
-# 5.Check for realistic production curve: if between 0.1 and 0.9 => OK
-calc.bmsyk(res)
-plotspict.production(res)
-```
-
-```{r message=FALSE}
-# 6.Check for assessment uncertainty:
-# Main variance paramterers (logsdb, logsdc, logsdi, logsdf) should not be unreallistically high:
-get.par("logsdb", res)
-get.par("logsdc", res)
-get.par("logsdi", res)
-get.par("logsdf", res)
-calc.om(res) # if order of magnitude < 2 => OK)
-```
-
-```{r message=FALSE, include=FALSE}
-# 7. Initial values do not influence the parameter estimates:
-check <- check.ini(input, ntrials = 30)
-```
-```{r message= FALSE}
-# 7. Initial values do not influence the parameter estimates:
-check$check.ini$resmat  # Trials that converged should have same or similar estimates.
-```
-
-## Covariance between the model parameters (fixed effects):
-```{r}
-#correlation between the model parameters (fixed effects)
-cov2cor(res$cov.fixed)
-```
-
-# RUN 2. SPiCT for anchovy in Division 9a South:
-
-## Create the SPiCT input object (`input`) for RUN 2:
-Inputs: quarterly landings (*obsC*, *timeC*) and exploitable biomass indices (*obsl*, *timel*, *obsl1*, *time1*, *obsl2*, *time2*, *obsl3*, *time3*).
-
-```{r}
-input_boc <- list(timeC = timeC, obsC = obsC)
-input_boc$timeI <- list(temp_df_pelago$timel, temp_df_ecocadiz$time1, temp_df_ecocadiz_rec$time2, temp_df_bocadeva$time3)
-input_boc$obsI <- list()
-input_boc$obsI[[1]] <- temp_df_pelago$obsl
-input_boc$obsI[[2]] <- temp_df_ecocadiz$obsl1
-input_boc$obsI[[3]] <- temp_df_ecocadiz_rec$obsl2
-input_boc$obsI[[4]] <- temp_df_bocadeva$obsl3
-```
-
-## Check and plot `input`:
-```{r fig.width=12, fig.height=8, dpi=300}
-input_boc <- check.inp(input_boc)
-plotspict.data(input_boc, qlegend = TRUE)
+sc_1_data <- list(timeC = timeC, obsC = obsC)
+sc_1_data$timeI <- list(temp_df_pelago$timel, temp_df_ecocadiz$time1, temp_df_ecocadiz_rec$time2)
+sc_1_data$obsI <- list()
+sc_1_data$obsI[[1]] <- temp_df_pelago$obsl
+sc_1_data$obsI[[2]] <- temp_df_ecocadiz$obsl1
+sc_1_data$obsI[[3]] <- temp_df_ecocadiz_rec$obsl2
 ```
 
 ```{r fig.width=12, fig.height=8, dpi=300}
-plotspict.ci(input_boc)
+plotspict.data(sc_1_data, qlegend = TRUE)
 ```
 
-## Fit the model & plot results:
-```{r}
-res_boc <- fit.spict(input_boc)
-summary(res_boc)
-plot(res_boc)
-```
+* Scenario 2: identical to Scenario 1 but adding uncertainty to the 2012 ECOCADIZ-RECLUTAS exploitable biomass estimate.
 
 ```{r include=FALSE}
-write.csv(capture.output(summary(res_boc)), "path")
+sc_2_data <- list(timeC = timeC, obsC = obsC)
+sc_2_data$timeI <- list(temp_df_pelago$timel, temp_df_ecocadiz$time1, temp_df_ecocadiz_rec$time2)
+sc_2_data$obsI <- list()
+sc_2_data$obsI[[1]] <- temp_df_pelago$obsl
+sc_2_data$obsI[[2]] <- temp_df_ecocadiz$obsl1
+sc_2_data$obsI[[3]] <- temp_df_ecocadiz_rec$obsl2
+sc_2_data$stdevfacI <- list()  # Start stdevfacI list
+sc_2_data$stdevfacI[[1]] <- rep(1, length(sc_2_data$obsI[[1]])) #Adjust list length to observation list
+sc_2_data$stdevfacI[[2]] <- rep(1, length(sc_2_data$obsI[[2]])) # Same
+sc_2_data$stdevfacI[[3]] <- rep(1, length(sc_2_data$obsI[[3]])) # Same
+sc_2_data$stdevfacI[[3]][1] <- 1.0075  # Increase Ecocadiz-Reclutas 2012 observation uncertainty
 ```
 
-Absolute biomass:   
+```{r fig.width=12, fig.height=8, dpi=300}
+plotspict.data(sc_2_data, qlegend = TRUE)
+```
+
+* Scenario 3: commercial landings data and exploitable biomass indices from PELAGO, ECOCADIZ, ECOCADIZ-RECLUTAS and BOCADEVA.
+
+```{r include=FALSE}
+sc_3_data <- list(timeC = timeC, obsC = obsC)
+sc_3_data$timeI <- list(temp_df_pelago$timel, temp_df_ecocadiz$time1, temp_df_ecocadiz_rec$time2, temp_df_bocadeva$time3)
+sc_3_data$obsI <- list()
+sc_3_data$obsI[[1]] <- temp_df_pelago$obsl
+sc_3_data$obsI[[2]] <- temp_df_ecocadiz$obsl1
+sc_3_data$obsI[[3]] <- temp_df_ecocadiz_rec$obsl2
+sc_3_data$obsI[[4]] <- temp_df_bocadeva$obsl3
+```
+
+```{r fig.width=12, fig.height=8, dpi=300}
+plotspict.data(sc_3_data, qlegend = TRUE)
+```
+
+* Scenario 4: identical to Scenario 3 but adding the uncertainy to the 2012 ECOCADIZ-RECLUTAS exploitable biomass estimate and to the BOCADEVA estimates.
+
+```{r include=FALSE}
+sc_4_data <- list(timeC = timeC, obsC = obsC)
+sc_4_data$timeI <- list(temp_df_pelago$timel, temp_df_ecocadiz$time1, temp_df_ecocadiz_rec$time2, temp_df_bocadeva$time3)
+sc_4_data$obsI <- list()
+sc_4_data$obsI[[1]] <- temp_df_pelago$obsl
+sc_4_data$obsI[[2]] <- temp_df_ecocadiz$obsl1
+sc_4_data$obsI[[3]] <- temp_df_ecocadiz_rec$obsl2
+sc_4_data$obsI[[4]] <- temp_df_bocadeva$obsl3
+sc_4_data$stdevfacI <- list()  # Start stdevfacI list
+sc_4_data$stdevfacI[[1]] <- rep(1, length(sc_4_data$obsI[[1]])) #Adjust list length to observation list
+sc_4_data$stdevfacI[[2]] <- rep(1, length(sc_4_data$obsI[[2]])) # Same
+sc_4_data$stdevfacI[[3]] <- rep(1, length(sc_4_data$obsI[[3]])) # Same
+sc_4_data$stdevfacI[[4]] <- rep(1, length(sc_4_data$obsI[[4]])) # Same
+sc_4_data$stdevfacI[[3]][1] <- 1.0075  # Increase Ecocadiz-Reclutas 2012 observation uncertainty
+sc_4_data$stdevfacI[[4]][1] <- 0.62 # Survey period uncertainty of BOCADEVA
+sc_4_data$stdevfacI[[4]][2] <- 0.32
+sc_4_data$stdevfacI[[4]][3] <- 0.4
+sc_4_data$stdevfacI[[4]][4] <- 0.3
+sc_4_data$stdevfacI[[4]][5] <- 0.61
+sc_4_data$stdevfacI[[4]][6] <- 0.43 
+sc_4_data$stdevfacI[[4]][7] <- 0.62 
+```
+
+```{r fig.width=12, fig.height=8, dpi=300}
+plotspict.data(sc_4_data, qlegend = TRUE)
+```
+
+## Implementation
+
+We implemented the model and scenarios using the *SPiCT* package (Pedersen & Berg, 2017) from R (R Core Team, 2024) and the default priors.
+
+# Results
+
+We obtained two types of results: a) model parameter estimates, reference points & state estimations and b) model diagnostics for model acceptance. 
+
+## Scenario 1  
+
+### Model Fit 
+The model obtained acceptable uncertainty levels and an estimated exploitable biomass of 2219.43 tonnes and a fising mortality of 3.25 in 2023. Predicted catchabilities were 6.29, 8.75 and 5.31 for PELAGO, ECOCADIZ and ECOCADIZ-RECLUTAS, respectively. Additionally, Kobe plot shows that the stock has suboptimal biomass estimates as well as lower fishing mortality than fishing mortality at Maximum Sustainable Yield (MSY).
+```{r fig.width=12, fig.height=8, dpi=300}
+res_sc_1 <- fit.spict(sc_1_data)
+summary(res_sc_1)
+plot(res_sc_1)
+```
+
+### Model Diagnostics
+According to the diagnostic checklist for model acceptance, the model meets all requirements except normality of catch residuals.
+  
+* 1- The assessment converged:  
 ```{r}
-plotspict.biomass(res_boc) # Absolute biomass 
+# if 0 => OK
+res_sc_1$opt$convergence
 ```
   
-Absolute F:  
+* 2- All variance parameters of the model parameters are finite:
 ```{r}
-plotspict.f(res_boc) # Absolute F
+# if TRUE => OK
+all(is.finite(res_sc_1$sd))
 ```
   
-Relative B & F and Catch & Kobe plot:  
-```{r}
-plot2(res_boc) # Relative B, relative F, catch & Kobe plot
+* 3- No violation of model assumptions:  
+```{r fig.width=12, fig.height=8, dpi=300}
+res_sc_1 <- calc.osa.resid(res_sc_1)
+plotspict.diagnostic(res_sc_1)
 ```
   
-Priors:  
-```{r}
-plotspict.priors(res_boc) # plot priors
+* 4- Consistent patterns in the retrospective analysis:  
+```{r fig.width=12, fig.height=8, dpi=300}
+# if -0.2 < mohns_rho < 0.2 => OK
+retro_sc_1 <- retro(res_sc_1, nretroyear = 3)
+plotspict.retro(retro_sc_1) 
+plotspict.retro.fixed(retro_sc_1)
 ```
   
-## Residuals and Diagnostics:  
-```{r}
-res_boc <- calc.osa.resid(res_boc)
-plotspict.osar(res_boc)         #OSA residual analysis to evaluate the fit
+* 5- Realistic production curve:
+```{r fig.width=12, fig.height=8, dpi=300}
+# if between 0.1 and 0.9 => OK
+calc.bmsyk(res_sc_1)
+plotspict.production(res_sc_1)
 ```
   
-### Diagnostic check-list for aceptance:
-```{r}
-# 1.Assessment convergence: if 0 => OK
-res_boc$opt$convergence
-```
-
-```{r}
-# 2.All variance parameters are finite: if TRUE => OK
-all(is.finite(res_boc$sd))
-```
-
-```{r}
-# 3.Test for no violation of model assumptions
-sumspict.diagnostics(res_boc)
-plotspict.diagnostic(res_boc) 
-```
-
-```{r}
-# 4. Retrospective pattern analysis:
-retrores_boc <- retro(res_boc, nretroyear = 4)
-plotspict.retro(retrores_boc) 
-#mohns_rho(retrores_boc, what=c("BBmsy","FFmsy")) # if -0.2 < mohns_rho < 0.2 => OK
-plotspict.retro.fixed(retrores_boc)
-```
-
-```{r}
-# 5.Check for realistic production curve: if between 0.1 and 0.9 => OK
-calc.bmsyk(res_boc)
-plotspict.production(res_boc)
-```
-
+* 6- High assessment uncertainty:
 ```{r message=FALSE}
-# 6.Check for assessment uncertainty:
 # Main variance paramterers (logsdb, logsdc, logsdi, logsdf) should not be unreallistically high:
-get.par("logsdb", res_boc)
-get.par("logsdc", res_boc)
-get.par("logsdi", res_boc)
-get.par("logsdf", res_boc)
-calc.om(res_boc) # if order of magnitude < 2 => OK)
-```
-
-```{r message=FALSE, include=FALSE}
-# 7. Initial values do not influence the parameter estimates:
-check_boc <- check.ini(input_boc, ntrials = 30)
-```
-
-```{r message=FALSE}
-# 7. Initial values do not influence the parameter estimates:
-check_boc$check.ini$resmat # Trials that converged should have same or similar estimates.
+get.par("logsdb", res_sc_1)
+get.par("logsdc", res_sc_1)
+get.par("logsdi", res_sc_1)
+get.par("logsdf", res_sc_1)
+calc.om(res_sc_1) # if order of magnitude < 2 => OK)
 ```
   
-## Covariance between the model parameters (fixed effects):
-```{r}
-#correlation between the model parameters (fixed effects)
-cov2cor(res_boc$cov.fixed)
+* 7- Initial values do not influence the parameter estimates:
+```{r include=FALSE, message=FALSE}
+check_sc_1<- check.ini(sc_1_data, ntrials = 30)
 ```
+```{r message=FALSE}
+check_sc_1$check.ini$resmat  # Trials that converged should have same or similar estimates.
+```
+
+## Scenario 2
+
+### Model Fit
+In this second configuration of the model, the uncertainty levels were also acceptable and the estimated exploitable biomass was 2217.19 tonnes and the fishing mortality was 3.25 for 2023. Predicted catchabilities were estimated at 6.30, 8.77 and 5.31 for PELAGO, ECOCADIZ and ECOCADIZ-RECLUTAS, respectively. Additionally, Kobe plot also shows that the stock has suboptimal biomass estimates as well as lower fishing mortality than fishing mortality at MSY.
+```{r fig.width=12, fig.height=8, dpi=300}
+res_sc_2 <- fit.spict(sc_2_data)
+summary(res_sc_2)
+plot(res_sc_2)
+```
+
+### Model Diagnostics
+According to the diagnostic checklist, the model meets all requirements except normality of catch residuals, as in Scenario 1. 
+  
+* 1- The assessment converged:  
+```{r}
+# if 0 => OK
+res_sc_2$opt$convergence
+```
+  
+* 2- All variance parameters of the model parameters are finite:
+```{r}
+# if TRUE => OK
+all(is.finite(res_sc_2$sd))
+```
+  
+* 3- No violation of model assumptions:  
+```{r fig.width=12, fig.height=8, dpi=300}
+res_sc_2 <- calc.osa.resid(res_sc_2)
+plotspict.diagnostic(res_sc_2)
+```
+  
+* 4- Consistent patterns in the retrospective analysis:  
+```{r fig.width=12, fig.height=8, dpi=300}
+# if -0.2 < mohns_rho < 0.2 => OK
+retro_sc_2 <- retro(res_sc_2, nretroyear = 3)
+plotspict.retro(retro_sc_2) 
+plotspict.retro.fixed(retro_sc_2)
+```
+  
+* 5- Realistic production curve:
+```{r fig.width=12, fig.height=8, dpi=300}
+# if between 0.1 and 0.9 => OK
+calc.bmsyk(res_sc_2)
+plotspict.production(res_sc_2)
+```
+  
+* 6- High assessment uncertainty:
+```{r message=FALSE}
+# Main variance paramterers (logsdb, logsdc, logsdi, logsdf) should not be unreallistically high:
+get.par("logsdb", res_sc_2)
+get.par("logsdc", res_sc_2)
+get.par("logsdi", res_sc_2)
+get.par("logsdf", res_sc_2)
+calc.om(res_sc_2) # if order of magnitude < 2 => OK)
+```
+  
+* 7- Initial values do not influence the parameter estimates:
+```{r include=FALSE, message=FALSE}
+check_sc_2 <- check.ini(sc_2_data, ntrials = 30)
+```
+```{r message=FALSE}
+check_sc_2$check.ini$resmat  # Trials that converged should have same or similar estimates.
+```
+
+## Scenario 3
+
+### Model Fit
+Results when BOCADEVA data is included in the model indicate that uncertainty levels are higher. According to the estimated exploitable biomass, the model estimated an exploitable biomass of 2513.81 tonnes and a fishing mortality of 2.75. Predicted catchabilities were 5.52, 7.33, 4.45 and 8.86 for PELAGO, ECOCADIZ, ECOCADIZ-RECLUTAS and BOCADEVA, respectively. Moreover, as in the two previous scenarios, Kobe plot determines that the stock biomass is in suboptimal levels and the fishing mortality is lower than fishing mortality at MSY.
+```{r fig.width=12, fig.height=8, dpi=300}
+res_sc_3 <- fit.spict(sc_3_data)
+summary(res_sc_3)
+plot(res_sc_3)
+```
+
+### Model Diagnostics
+In relation to the diagnostic checklist, the model meets all requirements except normality of catch residuals and order of magnitudes of *B/BMSY* and *F/FMSY*. In this sense, *B/BMSY* and *F/FMSY* orders of magnitude were 3 and 2, respectively. Moreover, the retrospective analysis could not converge with peel -3.
+  
+* 1- The assessment converged:  
+```{r}
+# if 0 => OK
+res_sc_3$opt$convergence
+```
+  
+* 2- All variance parameters of the model parameters are finite:
+```{r}
+# if TRUE => OK
+all(is.finite(res_sc_3$sd))
+```
+  
+* 3- No violation of model assumptions:  
+```{r fig.width=12, fig.height=8, dpi=300}
+res_sc_3 <- calc.osa.resid(res_sc_3)
+plotspict.diagnostic(res_sc_3)
+```
+  
+* 4- Consistent patterns in the retrospective analysis:  
+```{r fig.width=12, fig.height=8, dpi=300}
+# if -0.2 < mohns_rho < 0.2 => OK
+retro_sc_3 <- retro(res_sc_3, nretroyear = 3)
+plotspict.retro(retro_sc_3) 
+plotspict.retro.fixed(retro_sc_3)
+```
+  
+* 5- Realistic production curve:
+```{r fig.width=12, fig.height=8, dpi=300}
+# if between 0.1 and 0.9 => OK
+calc.bmsyk(res_sc_3)
+plotspict.production(res_sc_3)
+```
+  
+* 6- High assessment uncertainty:
+```{r message=FALSE}
+# Main variance paramterers (logsdb, logsdc, logsdi, logsdf) should not be unreallistically high:
+get.par("logsdb", res_sc_3)
+get.par("logsdc", res_sc_3)
+get.par("logsdi", res_sc_3)
+get.par("logsdf", res_sc_3)
+calc.om(res_sc_3) # if order of magnitude < 2 => OK)
+```
+  
+* 7- Initial values do not influence the parameter estimates:
+```{r include=FALSE, message=FALSE}
+check_sc_3 <- check.ini(sc_3_data, ntrials = 30)
+```
+```{r message=FALSE}
+check_sc_3$check.ini$resmat  # Trials that converged should have same or similar estimates.
+```
+
+## Scenario 4
+
+### Model Fit
+Results when BOCADEVA data and it's uncertainty levels were included in the model also show high uncertainty levels of model estimations. According to the estimated exploitable biomass, the model estimated an exploitable biomass of 2440.36 tonnes and a fishing mortality of 2.84. Predicted catchabilities were 5.62, 7.55, 4.58 and 9.08 for PELAGO, ECOCADIZ, ECOCADIZ-RECLUTAS and BOCADEVA, respectively. Kobe plot again defines stock biomass in suboptimal levels and the fishing mortality in lower levels than fishing mortality at MSY.
+```{r fig.width=12, fig.height=8, dpi=300}
+res_sc_4 <- fit.spict(sc_4_data)
+summary(res_sc_4)
+plot(res_sc_4)
+```
+
+### Model Diagnostics
+Diagnostic checklist determined that model met all requirements except normality of catch residuals and order of magnitude of *F/FMSY*. In this sense, *F/FMSY* order of magnitude was 2. Additionally, the retrospective analysis could not converge with peel -3.
+  
+* 1- The assessment converged:  
+```{r}
+# if 0 => OK
+res_sc_4$opt$convergence
+```
+  
+* 2- All variance parameters of the model parameters are finite:
+```{r}
+# if TRUE => OK
+all(is.finite(res_sc_4$sd))
+```
+  
+* 3- No violation of model assumptions:  
+```{r fig.width=12, fig.height=8, dpi=300}
+res_sc_4 <- calc.osa.resid(res_sc_4)
+plotspict.diagnostic(res_sc_4)
+```
+  
+* 4- Consistent patterns in the retrospective analysis:  
+```{r fig.width=12, fig.height=8, dpi=300}
+# if -0.2 < mohns_rho < 0.2 => OK
+retro_sc_4 <- retro(res_sc_4, nretroyear = 3)
+plotspict.retro(retro_sc_4) 
+plotspict.retro.fixed(retro_sc_4)
+```
+  
+* 5- Realistic production curve:
+```{r fig.width=12, fig.height=8, dpi=300}
+# if between 0.1 and 0.9 => OK
+calc.bmsyk(res_sc_4)
+plotspict.production(res_sc_4)
+```
+  
+* 6- High assessment uncertainty:
+```{r message=FALSE}
+# Main variance paramterers (logsdb, logsdc, logsdi, logsdf) should not be unreallistically high:
+get.par("logsdb", res_sc_4)
+get.par("logsdc", res_sc_4)
+get.par("logsdi", res_sc_4)
+get.par("logsdf", res_sc_4)
+calc.om(res_sc_4) # if order of magnitude < 2 => OK)
+```
+  
+* 7- Initial values do not influence the parameter estimates:
+```{r include=FALSE, message=FALSE}
+check_sc_4 <- check.ini(sc_4_data, ntrials = 30)
+```
+```{r message=FALSE}
+check_sc_4$check.ini$resmat  # Trials that converged should have same or similar estimates.
+```
+
+# Conclusions
+
+Results indicate that the most robust scenario was Scenario 2. This scenario obtained better results than Scenario 3 and 4 in the diagnostic checklist and included an uncertainty level in ECOCADIZ-RECLUTAS 2012 estimate, making it more realistic than Scenario 1. The greater robustness shown by Scenario 2 compared to Scenarios 3 and 4 could be due to the number of estimates from the BOCADEVA campaign (7 estimates). The low number of estimates from BOCADEVA index may have negatively affected the model fit introducing some noise or additional uncertainty. Thus, we recommend using the scenario 2 estimates over the other scenarios. Finally, a larger number of estimates in the BOCADEVA survey could improve the model obtained in both scenario 3 and scenario 4. Therefore, in order to define the influence of BOCADEVA estimates in the model, we recommend repeating the same exercise in a few years when more BOCADEVA campaigns have been carried out.
+
+# References
+
+* Bluemel, J. K., Fischer, S. H., Kulka, D. W., Lynam, C. P., & Ellis, J. R. (2022). Decline in Atlantic wolffish Anarhichas lupus in the North Sea: Impacts of fishing pressure and climate change. *Journal of Fish Biology, 100*(1), 253–267. [https://doi.org/10.1111/jfb.14942](https://doi.org/10.1111/jfb.14942)  
+
+* Cury, P., Bakun, A., Crawford, R. J. M., Jarre, A., Quiñones, R. A., Shannon, L. J., & Verheye, H. M. (2000). Small pelagics in upwelling systems: Patterns of interaction and structural changes in “wasp-waist” ecosystems. *ICES Journal of Marine Science, 57*(3), 603–618. [https://doi.org/10.1006/jmsc.2000.0712](https://doi.org/10.1006/jmsc.2000.0712)  
+
+* Derhy, G., Macías, D., Elkalay, K., Khalil, K., & Rincón, M. M. (2022). Stochastic Modelling to Assess External Environmental Drivers of Atlantic Chub Mackerel Population Dynamics. *Sustainability, 14*(15), Article 15. [https://doi.org/10.3390/su14159211](https://doi.org/10.3390/su14159211)  
+
+* FAO (2024a). The State of World Fisheries and Aquaculture 2024 – Blue Transformation in action. Rome. [https://doi.org/10.4060/cd0683en]([https://doi.org/10.4060/cd0683en)  
+
+* FAO (2024b). FAO Fisheries and Aquaculture - FishStatJ - Software for Fishery and Aquaculture Statistical Time Series. In: FAO Fisheries and Aquaculture Division [online]. Rome. [Cited 3 April 2024]. [https://www.fao.org/fishery/en/statistics/software/fishstatj](https://www.fao.org/fishery/en/statistics/software/fishstatj)  
+
+* González Herraiz, I., Vila, Y., Cardinale, M., Berg, C. W., Winker, H., Azevedo, M., Mildenberger, T. K., Kokkalis, A., Vázquez Vilamea, A. A., Morlán, R., Somavilla, R., & Pennino, M. G. (2023). First Maximum Sustainable Yield advice for the Nephrops norvegicus stocks of the Northwest Iberian coast using stochastic Surplus Production model in Continuous Time (SPiCT). *Frontiers in Marine Science, 10*. [https://doi.org/10.3389/fmars.2023.1062078](https://doi.org/10.3389/fmars.2023.1062078).  
+
+* Morello, E.B., & Arneri, E. (2009). Anchovy and Sardine in the Adriatic Sea - An Ecological Review. In *Oceanograophy and Marine Biology*. CRC Press.  
+
+* Pedersen, M. W., & Berg, C. W. (2017). A stochastic surplus production model in continuous time. *Fish and Fisheries, 18*(2), 226–243. [https://doi.org/10.1111/faf.1217](https://doi.org/10.1111/faf.1217)  
+
+* Pella, J. J., & Tomlinson, P. K. (1969). A generalized stock production model.  
+
+* R Core Team (2024). _R: A Language and Environment for Statistical Computing_. R Foundation for Statistical Computing, Vienna, Austria. [https://www.R-project.org/](https://www.R-project.org/).  
+
+* Soto, M., Fernández-Peralta, L., Pennino, M. G., Kokkalis, A., Rey, J., Salmerón, F., Liébana, M., Meissa, B., & Kell, L. (2023). Effects of misreporting landings, discards, and Catch Per Unit of Effort index in state-space production models: The case of black hake in northwest Africa. *ICES Journal of Marine Science, 80*(10), 2591–2605. [https://doi.org/10.1093/icesjms/fsac188](https://doi.org/10.1093/icesjms/fsac188)
+
 
